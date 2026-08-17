@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Un mensaje para Juliana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Montserrat:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);
+      font-family: 'Montserrat', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 15px;
+      color: #333;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Etiqueta / Texto encima del sobre */
+    .texto-encima {
+      font-family: 'Caveat', cursive;
+      font-size: 2.5rem;
+      color: #d81b60;
+      margin-bottom: 15px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+      animation: fadeIn 0.8s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Sobre interactivo */
+    .sobre {
+      width: 220px;
+      height: 150px;
+      background: linear-gradient(145deg, #e91e63, #d81b60);
+      border-radius: 16px;
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 10px 25px rgba(233, 30, 99, 0.3);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.27);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .sobre:active, .sobre:hover {
+      transform: scale(1.05);
+    }
+
+    .corazon {
+      font-size: 3.5rem;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+    }
+
+    /* Ventana Emergente (Modal) */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      z-index: 1000;
+    }
+
+    .modal-contenido {
+      background: #ffffff;
+      padding: 30px 24px;
+      border-radius: 20px;
+      text-align: center;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+      animation: popIn 0.3s ease-out forwards;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-contenido p {
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: #4a4a4a;
+      font-weight: 400;
+      margin-bottom: 25px;
+      font-style: italic;
+    }
+
+    .btn-grupo {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      font-size: 1rem;
+      font-family: 'Montserrat', sans-serif;
+      transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-si {
+      background-color: #e91e63;
+      color: white;
+      box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+    }
+
+    .btn-si:active {
+      transform: scale(0.96);
+      background-color: #c2185b;
+    }
+
+    .btn-no {
+      background-color: #f0f0f0;
+      color: #666;
+    }
+
+    .btn-no:active {
+      transform: scale(0.96);
+      background-color: #e0e0e0;
+    }
+
+    /* Carta estilo libreta/hoja */
+    .carta-contenedor {
+      display: none;
+      background-color: #ffffff;
+      padding: 40px 30px;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 550px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+      text-align: left;
+      line-height: 1.8;
+      color: #2c2c2c;
+      position: relative;
+      background-image: linear-gradient(#f1f1f1 1px, transparent 1px);
+      background-size: 100% 2em;
+    }
+
+    .carta-titulo {
+      font-family: 'Caveat', cursive;
+      font-size: 2.6rem;
+      color: #d81b60;
+      margin-bottom: 20px;
+      line-height: 1.2;
+    }
+
+    .carta-cuerpo p {
+      font-size: 1.05rem;
+      font-weight: 400;
+      margin-bottom: 18px;
+      color: #374151;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Texto visible encima de la carta -->
+    <div class="texto-encima" id="etiquetaTexto">Para Juliana</div>
+
+    <!-- Sobre -->
+    <div class="sobre" id="sobreCarta">
+      <div class="corazon">💌</div>
+    </div>
+
+    <!-- Carta con tu texto completo -->
+    <div class="carta-contenedor" id="contenidoCarta">
+      <div class="carta-titulo">Hola Juliana,</div>
+      <div class="carta-cuerpo">
+        <p>Llevaba un tiempo pensando si debía escribirte esto o no, principalmente porque me cuesta un poco encontrar las palabras exactas para explicarlo. Hay sensaciones que simplemente no caben del todo en un mensaje, pero aun así tenía ganas de intentarlo.</p>
+        
+        <p>Hacía muchísimo tiempo que no me sentía de esta manera. A veces uno se acostumbra a la rutina y a la neutralidad, hasta que llega alguien que rompe esa inercia sin proponérselo. Eso es exactamente lo que me pasa contigo: me llamas muchísimo la atención. Tienes una sonrisa genuinamente linda y una forma de ser tan tuya —con esas ocurrencias tan particulares y fascinantes— que te vuelve alguien imposible de ignorar y profundamente interesante. Me gusta esa autenticidad que transmites; ver a alguien tan fiel a sí misma da muchísima frescura.</p>
+        
+        <p>De verdad espero que esto no cambie nada entre nosotros ni afecte el trato que tenemos, es lo último que quisiera. Tampoco me gustaría que pienses que los detalles, los gestos o las cosas que te llevo son con el interés de ganar algo a cambio o buscar una segunda intención. Simplemente esa es mi manera de ser con la gente que aprecio.</p>
+        
+        <p>Te pido una disculpa si expresar este sentimiento resulta de cierta forma egoísta de mi parte. No te escribo esto para ponerte en un compromiso ni con la expectativa de recibir una respuesta en particular. Solo quería ser sincero y dejarte saber el efecto tan bonito que generas. Gracias por devolverme esa sensación de entusiasmo que ya casi no recordaba.</p>
+        
+        <p>Espero que esta nota al menos te saque una linda sonrisa.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ventana emergente -->
+  <div class="modal" id="ventanaEmergente">
+    <div class="modal-contenido">
+      <p>«Realmente, no quiero que esto sea extraño ni que pueda cambiar el tipo de relación que tenemos... Realmente solo es algo plenamente mío y un sentimiento egoísta. Si quieres leerlo, haz clic en <b>Sí</b>; pero si no, lo voy a entender sin problemas.»</p>
+      <div class="btn-grupo">
+        <button class="btn btn-si" id="btnSi">Sí, quiero leerlo</button>
+        <button class="btn btn-no" id="btnNo">No por ahora</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const sobre = document.getElementById('sobreCarta');
+    const etiqueta = document.getElementById('etiquetaTexto');
+    const modal = document.getElementById('ventanaEmergente');
+    const carta = document.getElementById('contenidoCarta');
+    const btnSi = document.getElementById('btnSi');
+    const btnNo = document.getElementById('btnNo');
+
+    let modalMostrado = false;
+
+    function abrirModal() {
+      if (!modalMostrado) {
+        modal.style.display = 'flex';
+        modalMostrado = true;
+      }
+    }
+
+    // Eventos para móvil (click) y escritorio (hover/mouseenter)
+    sobre.addEventListener('mouseenter', abrirModal);
+    sobre.addEventListener('click', abrirModal);
+
+    // Acción si acepta leerla
+    btnSi.addEventListener('click', () => {
+      modal.style.display = 'none';
+      sobre.style.display = 'none';
+      etiqueta.style.display = 'none';
+      carta.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // Acción si rechaza
+    btnNo.addEventListener('click', () => {
+      modal.style.display = 'none';
+      modalMostrado = false;
+    });
+  </script>
+
+</body>
+</html>

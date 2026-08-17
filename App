@@ -1,0 +1,402 @@
+import tkinter as tk
+from tkinter import messagebox, ttk, filedialog
+import json
+import os
+from PIL import Image, ImageTk
+
+# --- CONFIGURACIÓN ---
+ARCHIVO_JSON = "apartamentos.json"
+RUTA_LOGO = "logo_b&y.png.png"
+TAMAÑO_IMAGEN_PREVIEW = (150, 150)  # Ancho y alto para la vista previa
+
+# --- FUNCIONES DE GESTIÓN DE DATOS ---
+def cargar_apartamentos():
+    if os.path.exists(ARCHIVO_JSON):
+        try:
+            with open(ARCHIVO_JSON, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                # Asegura que cada apartamento tiene la clave 'fotos'
+                for apt in data:
+                    if "fotos" not in apt:
+                        apt["fotos"] = []
+                return data
+        except json.JSONDecodeError:
+            messagebox.showerror("Error", "Error al cargar el archivo de apartamentos. Se iniciará con datos por defecto.")
+            return datos_por_defecto()
+    else:
+        return datos_por_defecto()
+
+def datos_por_defecto():
+    return [
+        {
+            "titulo": "Moderno apartamento en el centro",
+            "ubicacion": "Ciudad Central",
+            "precio": "$750/mes",
+            "descripcion": "2 habitaciones, 1 baño, cerca del metro.",
+            "fotos": []
+        },
+        {
+            "titulo": "Apartamento con vista al mar",
+            "ubicacion": "Playa Azul",
+            "precio": "$1200/mes",
+            "descripcion": "3 habitaciones, balcón, acceso a la playa.",
+            "fotos": []
+        },
+        {
+            "titulo": "Loft minimalista",
+            "ubicacion": "Zona Norte",
+            "precio": "$600/mes",
+            "descripcion": "1 habitación, cocina equipada, zona tranquila.",
+            "fotos": []
+        }
+    ]
+
+def guardar_apartamentos():
+    with open(ARCHIVO_JSON, "w", encoding="utf-8") as f:
+        json.dump(apartamentos, f, ensure_ascii=False, indent=4)
+
+# --- DATOS INICIALES ---
+apartamentos = cargar_apartamentos()
+
+# --- FUNCIONES DE LA INTERFAZ ---
+def mostrar_detalles(index):
+    if 0 <= index < len(apartamentos):
+        apt = apartamentos[index]
+        
+        detalles_window = tk.Toplevel(root)
+        detalles_window.title(f"Detalles de {apt['titulo']}")
+        detalles_window.geometry("500x600")
+        detalles_window.configure(bg="#f0f0f0")
+        detalles_window.grab_set()
+
+        # Mostrar la primera foto si existe
+        if apt.get("fotos") and len(apt["fotos"]) > 0 and os.path.exists(apt["fotos"][0]):
+            try:
+                img_original = Image.open(apt["fotos"][0])
+                img_display = img_original.resize((450, 300), Image.Resampling.LANCZOS)
+                img_tk = ImageTk.PhotoImage(img_display)
+                lbl_imagen_detalle = tk.Label(detalles_window, image=img_tk, bg="#f0f0f0")
+                lbl_imagen_detalle.image = img_tk
+                lbl_imagen_detalle.pack(pady=(10, 5))
+            except Exception as e:
+                pass # No hacer nada si hay un error al cargar
+
+        # Frame para la información de texto
+        info_frame = tk.Frame(detalles_window, bg="#f0f0f0")
+        info_frame.pack(padx=20, pady=10, fill="both", expand=True)
+
+        lbl_titulo = tk.Label(info_frame, text=apt['titulo'], font=("Arial", 16, "bold"), bg="#f0f0f0", fg="#003366")
+        lbl_titulo.pack(pady=(0, 5))
+
+        lbl_ubicacion = tk.Label(info_frame, text=f"📍 Ubicación: {apt['ubicacion']}", font=("Arial", 12), bg="#f0f0f0", anchor="w")
+        lbl_ubicacion.pack(fill="x")
+
+        lbl_precio = tk.Label(info_frame, text=f"💰 Precio: {apt['precio']}", font=("Arial", 12), bg="#f0f0f0", anchor="w")
+        lbl_precio.pack(fill="x")
+
+        lbl_descripcion = tk.Label(info_frame, text=f"Descripción:\n{apt['descripcion']}", font=("Arial", 12), bg="#f0f0f0", anchor="w", justify="left")
+        lbl_descripcion.pack(fill="x", pady=(10, 0))
+
+        detalles_window.protocol("WM_DELETE_WINDOW", lambda: detalles_window.destroy())
+        root.wait_window(detalles_window)
+    else:
+        messagebox.showerror("Error", "Índice de apartamento no válido.")
+
+def eliminar_apartamento(index):
+    if 0 <= index < len(apartamentos):
+        confirmacion = messagebox.askyesno("Eliminar", "¿Estás seguro de que deseas eliminar este apartamento?")
+        if confirmacion:
+            apartamentos.pop(index)
+            guardar_apartamentos()
+            actualizar_lista()
+    else:
+        messagebox.showerror("Error", "Índice de apartamento no válido.")
+
+def editar_apartamento(index):
+    if not (0 <= index < len(apartamentos)):
+        messagebox.showerror("Error", "Índice de apartamento no válido.")
+        return
+
+    apt = apartamentos[index]
+    formulario = tk.Toplevel(root)
+    formulario.title(f"Editar Apartamento: {apt['titulo']}")
+    formulario.geometry("400x500")
+    formulario.configure(bg="#f0f0f0")
+    formulario.transient(root)
+    formulario.grab_set()
+    
+    campos = {
+        "titulo": "Título:",
+        "ubicacion": "Ubicación:",
+        "precio": "Precio:",
+        "descripcion": "Descripción:"
+    }
+    
+    entradas = {}
+    rutas_fotos_temp = apt.get("fotos", []).copy()
+
+    for i, (clave, texto) in enumerate(campos.items()):
+        label = tk.Label(formulario, text=texto, font=("Arial", 12), bg="#f0f0f0")
+        label.pack(pady=(10 if i == 0 else 5, 0))
+
+        if clave != "descripcion":
+            entry = ttk.Entry(formulario, width=40, font=("Arial", 12))
+            entry.insert(0, apt[clave])
+        else:
+            entry = tk.Text(formulario, width=40, height=4, font=("Arial", 12))
+            entry.insert("1.0", apt[clave])
+
+        entry.pack(pady=5)
+        entradas[clave] = entry
+
+    def seleccionar_fotos():
+        nonlocal rutas_fotos_temp
+        nuevas_rutas = filedialog.askopenfilenames(
+            title="Seleccionar fotos para el apartamento",
+            filetypes=[("Archivos de Imagen", "*.png *.jpg *.jpeg *.gif")]
+        )
+        if nuevas_rutas:
+            rutas_fotos_temp = list(nuevas_rutas)
+            messagebox.showinfo("Fotos seleccionadas", f"Se han seleccionado {len(rutas_fotos_temp)} fotos.")
+
+    btn_fotos = ttk.Button(formulario, text="📸 Seleccionar/Cambiar Fotos", command=seleccionar_fotos, style='TButton')
+    btn_fotos.pack(pady=10)
+
+    def guardar_edicion():
+        valores_validos = True
+        for clave, widget in entradas.items():
+            if clave == "descripcion":
+                valor = widget.get("1.0", tk.END).strip()
+            else:
+                valor = widget.get().strip()
+
+            if not valor:
+                messagebox.showwarning("Campos incompletos", "Por favor completa todos los campos.")
+                valores_validos = False
+                break
+            apartamentos[index][clave] = valor
+        
+        if valores_validos:
+            apartamentos[index]["fotos"] = rutas_fotos_temp
+            guardar_apartamentos()
+            actualizar_lista()
+            formulario.destroy()
+
+    btn_guardar = ttk.Button(formulario, text="💾 Guardar Cambios", command=guardar_edicion, style='TButton')
+    btn_guardar.pack(pady=20)
+    formulario.protocol("WM_DELETE_WINDOW", lambda: formulario.destroy())
+    root.wait_window(formulario)
+
+def abrir_formulario():
+    formulario = tk.Toplevel(root)
+    formulario.title("Agregar Nuevo Apartamento")
+    formulario.geometry("400x500")
+    formulario.configure(bg="#f0f0f0")
+    formulario.transient(root)
+    formulario.grab_set()
+    
+    campos = {
+        "titulo": "Título:",
+        "ubicacion": "Ubicación:",
+        "precio": "Precio:",
+        "descripcion": "Descripción:"
+    }
+    
+    entradas = {}
+    rutas_fotos_temp = []
+
+    for i, (clave, texto) in enumerate(campos.items()):
+        label = tk.Label(formulario, text=texto, font=("Arial", 12), bg="#f0f0f0")
+        label.pack(pady=(10 if i == 0 else 5, 0))
+        if clave != "descripcion":
+            entry = ttk.Entry(formulario, width=40, font=("Arial", 12))
+        else:
+            entry = tk.Text(formulario, width=40, height=4, font=("Arial", 12))
+        entry.pack(pady=5)
+        entradas[clave] = entry
+
+    def seleccionar_fotos():
+        nonlocal rutas_fotos_temp
+        nuevas_rutas = filedialog.askopenfilenames(
+            title="Seleccionar fotos para el apartamento",
+            filetypes=[("Archivos de Imagen", "*.png *.jpg *.jpeg *.gif")]
+        )
+        if nuevas_rutas:
+            rutas_fotos_temp = list(nuevas_rutas)
+            messagebox.showinfo("Fotos seleccionadas", f"Se han seleccionado {len(rutas_fotos_temp)} fotos.")
+
+    btn_fotos = ttk.Button(formulario, text="📸 Seleccionar Fotos", command=seleccionar_fotos, style='TButton')
+    btn_fotos.pack(pady=10)
+
+    def guardar_apartamento():
+        nuevo_apto = {}
+        valores_validos = True
+        for clave, widget in entradas.items():
+            if clave == "descripcion":
+                valor = widget.get("1.0", tk.END).strip()
+            else:
+                valor = widget.get().strip()
+
+            if not valor:
+                messagebox.showwarning("Campos incompletos", "Por favor completa todos los campos.")
+                valores_validos = False
+                break
+            nuevo_apto[clave] = valor
+        
+        if valores_validos:
+            nuevo_apto["fotos"] = rutas_fotos_temp
+            apartamentos.append(nuevo_apto)
+            guardar_apartamentos()
+            actualizar_lista()
+            formulario.destroy()
+
+    btn_guardar = ttk.Button(formulario, text="💾 Guardar Apartamento", command=guardar_apartamento, style='TButton')
+    btn_guardar.pack(pady=20)
+    formulario.protocol("WM_DELETE_WINDOW", lambda: formulario.destroy())
+    root.wait_window(formulario)
+
+# --- VENTANA PRINCIPAL ---
+root = tk.Tk()
+root.title("B&Y ALQUILER - Encuentra Tu Nuevo Hogar")
+root.geometry("600x700")
+root.configure(bg="#e6f2ff")
+
+style = ttk.Style()
+style.theme_use("clam")
+
+style.configure('TButton', font=('Arial', 10, 'bold'), foreground='#003366', background='#cce6ff')
+style.map('TButton',
+    foreground=[('pressed', 'white'), ('active', 'white')],
+    background=[('pressed', '!active', '#004080'), ('active', '#0055aa')]
+)
+
+try:
+    imagen_original = Image.open(RUTA_LOGO)
+    ancho_deseado = 200
+    alto_original = imagen_original.height
+    ancho_original = imagen_original.width
+    alto_deseado = int((alto_original * ancho_deseado) / ancho_original)
+    imagen_redimensionada = imagen_original.resize((ancho_deseado, alto_deseado), Image.Resampling.LANCZOS)
+    logo_tk = ImageTk.PhotoImage(imagen_redimensionada)
+    lbl_logo = tk.Label(root, image=logo_tk, bg="#e6f2ff")
+    lbl_logo.image = logo_tk
+    lbl_logo.pack(pady=(10, 0))
+except FileNotFoundError:
+    messagebox.showwarning("Advertencia", f"No se encontró el archivo del logo en: {RUTA_LOGO}")
+except Exception as e:
+    messagebox.showerror("Error", f"Error al cargar el logo: {e}")
+
+titulo = tk.Label(root, text="Encuentra Tu Nuevo Hogar",
+                  font=("Times New Roman", 18, "bold"), bg="#e6f2ff", fg="#003366")
+titulo.pack(pady=(5, 10))
+
+frame_busqueda = tk.Frame(root, bg="#e6f2ff")
+frame_busqueda.pack(pady=5)
+
+entry_busqueda = ttk.Entry(frame_busqueda, width=40, font=("Arial", 12))
+entry_busqueda.pack(side=tk.LEFT, padx=10)
+
+btn_buscar = ttk.Button(frame_busqueda, text="🔍 Buscar", command=lambda: buscar_apartamentos(entry_busqueda.get()), style='TButton')
+btn_buscar.pack(side=tk.LEFT)
+
+btn_agregar = ttk.Button(root, text="➕ Añadir Apartamento", command=abrir_formulario, style='TButton')
+btn_agregar.pack(pady=10)
+
+frame_con_scroll = tk.Frame(root, bg="#e6f2ff")
+frame_con_scroll.pack(fill="both", expand=True, padx=10, pady=10)
+
+canvas = tk.Canvas(frame_con_scroll, bg="#e6f2ff", highlightthickness=0)
+scrollbar = ttk.Scrollbar(frame_con_scroll, orient="vertical", command=canvas.yview)
+scrollable_frame = tk.Frame(canvas, bg="#ffffff")
+
+scrollable_frame.bind(
+    "<Configure>",
+    lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+)
+
+canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+canvas.configure(yscrollcommand=scrollbar.set)
+
+canvas.pack(side="left", fill="both", expand=True)
+scrollbar.pack(side="right", fill="y")
+
+# --- FUNCIONES DE VISUALIZACIÓN ---
+def agregar_apartamento_a_lista(index, apt_data):
+    frame = tk.Frame(scrollable_frame, bg="#f9f9f9", bd=1, relief="solid", padx=10, pady=10)
+    frame.pack(pady=5, fill="x")
+
+    # Frame para la imagen y el texto
+    content_frame = tk.Frame(frame, bg="#f9f9f9")
+    content_frame.pack(fill="x")
+
+    # Mostrar la imagen si existe y el archivo es válido
+    if apt_data.get("fotos") and len(apt_data["fotos"]) > 0:
+        imagen_path = apt_data["fotos"][0]
+        if os.path.exists(imagen_path):
+            try:
+                img_original = Image.open(imagen_path)
+                img_redimensionada = img_original.resize(TAMAÑO_IMAGEN_PREVIEW, Image.Resampling.LANCZOS)
+                img_tk = ImageTk.PhotoImage(img_redimensionada)
+                lbl_imagen = tk.Label(content_frame, image=img_tk, bg="#f9f9f9")
+                lbl_imagen.image = img_tk  # Prevenir que sea eliminada
+                lbl_imagen.pack(side=tk.LEFT, padx=(0, 10))
+            except Exception as e:
+                # Si hay un error al cargar, muestra un texto en su lugar
+                lbl_imagen = tk.Label(content_frame, text="Error\nal cargar\nimagen", bg="#f9f9f9", padx=10)
+                lbl_imagen.pack(side=tk.LEFT, padx=(0, 10))
+        else:
+            lbl_imagen = tk.Label(content_frame, text="Imagen\nno\nencontrada", bg="#f9f9f9", padx=10)
+            lbl_imagen.pack(side=tk.LEFT, padx=(0, 10))
+
+    # Frame para el texto del apartamento
+    text_frame = tk.Frame(content_frame, bg="#f9f9f9")
+    text_frame.pack(side=tk.LEFT, fill="x", expand=True)
+    
+    lbl_titulo = tk.Label(text_frame, text=apt_data["titulo"], font=("Arial", 14, "bold"), bg="#f9f9f9", anchor="w", fg="#003366")
+    lbl_titulo.pack(fill="x")
+
+    lbl_ubicacion = tk.Label(text_frame, text=f"📍 {apt_data['ubicacion']}", font=("Arial", 12), bg="#f9f9f9", anchor="w")
+    lbl_ubicacion.pack(fill="x")
+
+    lbl_precio = tk.Label(text_frame, text=apt_data["precio"], font=("Arial", 12, "bold"), bg="#f9f9f9", fg="#008000", anchor="w")
+    lbl_precio.pack(fill="x")
+
+    botones_frame = tk.Frame(frame, bg="#f9f9f9")
+    botones_frame.pack(pady=5)
+
+    btn_detalles = ttk.Button(botones_frame, text="📄 Ver Detalles", command=lambda i=index: mostrar_detalles(i), style='TButton')
+    btn_detalles.pack(side=tk.LEFT, padx=5)
+
+    btn_editar = ttk.Button(botones_frame, text="✏️ Editar", command=lambda i=index: editar_apartamento(i), style='TButton')
+    btn_editar.pack(side=tk.LEFT, padx=5)
+
+    btn_eliminar = ttk.Button(botones_frame, text="🗑️ Eliminar", command=lambda i=index: eliminar_apartamento(i), style='TButton')
+    btn_eliminar.pack(side=tk.LEFT, padx=5)
+
+# Actualizar lista de apartamentos
+def actualizar_lista():
+    for widget in scrollable_frame.winfo_children():
+        widget.destroy()
+    for i, apt in enumerate(apartamentos):
+        agregar_apartamento_a_lista(i, apt)
+
+# Función de búsqueda
+def buscar_apartamentos(consulta):
+    consulta = consulta.lower()
+    resultados = [apt for apt in apartamentos if
+                  consulta in apt['titulo'].lower() or
+                  consulta in apt['ubicacion'].lower() or
+                  consulta in apt['descripcion'].lower() or
+                  consulta in apt['precio'].lower()]
+
+    for widget in scrollable_frame.winfo_children():
+        widget.destroy()
+
+    for i, apt in enumerate(resultados):
+        agregar_apartamento_a_lista(apartamentos.index(apt), apt)
+
+# Mostrar todos los apartamentos al iniciar
+actualizar_lista()
+
+# Ejecutar la app
+root.mainloop()
